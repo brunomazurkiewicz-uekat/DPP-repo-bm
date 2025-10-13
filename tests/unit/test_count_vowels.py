@@ -1,6 +1,7 @@
 import pytest
 from src.utils.count_vowels import count_vowels
 
+
 @pytest.mark.parametrize("text,expected", [
     ("", 0),  # pusty ciąg
     ("a", 1),  # jedna samogłoska

@@ -1,6 +1,7 @@
 import pytest
 from src.utils.calculate_discount import calculate_discount
 
+
 @pytest.mark.parametrize("price,discount,expected", [
     (100, 0.2, 80.0),  # typowy przypadek
     (50, 0.0, 50.0),  # brak zniżki
