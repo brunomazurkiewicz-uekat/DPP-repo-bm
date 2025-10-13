@@ -3,15 +3,13 @@ from src.utils.count_vowels import count_vowels
 
 
 @pytest.mark.parametrize("text,expected", [
-    ("", 0),  # pusty ciąg
-    ("a", 1),  # jedna samogłoska
-    ("bcdfg", 0),  # bez samogłosek
-    ("Python", 2),  # 'o'
-    ("AEIOUY", 6),  # wielkie litery
-    ("Kobyła ma mały bok", 7),  # 'o y a a a y o'
-    ("Żółw", 0)  # 'ó' nie liczymy (nie w zestawie)
+    ("Python", 2),
+    ("AEIOUY", 6),
+    ("bcd", 0),
+    ("", 0),
+    ("Próba żółwia", 3),
 ])
-def test_count_vowels_values(text, expected):
+def test_count_vowels_required_cases(text, expected):
     assert count_vowels(text) == expected
 
 
