@@ -11,3 +11,9 @@ from src.utils.flatten_list import flatten_list
 ])
 def test_flatten_list_required_cases(nested, expected):
     assert flatten_list(nested) == expected
+
+
+def test_flatten_list_type_error_non_list():
+    import pytest
+    with pytest.raises(TypeError):
+        flatten_list("not a list")  # type: ignore[arg-type]

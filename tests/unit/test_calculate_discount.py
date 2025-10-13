@@ -15,3 +15,15 @@ def test_calculate_discount_required_values(price, discount, expected):
 def test_calculate_discount_required_invalid_discount(discount):
     with pytest.raises(ValueError):
         calculate_discount(100, discount)
+
+
+def test_calculate_discount_negative_price():
+    import pytest
+    with pytest.raises(ValueError):
+        calculate_discount(-100, 0.2)
+
+
+def test_calculate_discount_type_error():
+    import pytest
+    with pytest.raises(TypeError):
+        calculate_discount("100", 0.2)  # type: ignore[arg-type]
