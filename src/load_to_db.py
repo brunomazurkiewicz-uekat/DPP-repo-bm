@@ -1,29 +1,32 @@
-from database import Base, engine, SessionLocal
-from models import Movie, Rating, Tag, Link
-from loaders import load_movies_from_file, load_links_from_file, load_ratings_from_file, load_tags_from_file
-from pathlib import Path
+from database import SessionLocal, engine, Base
+from models import Movie, Link, Rating, Tag
+from loaders import (
+    load_movies_from_file,
+    load_links_from_file,
+    load_ratings_from_file,
+    load_tags_from_file,
+)
 
-# Utwórz tabele
 Base.metadata.create_all(bind=engine)
-
 session = SessionLocal()
 
-# Ścieżki
-BASE_PATH = Path(__file__).resolve().parent / "files"
+# Wczytaj dane z CSV
+movies = load_movies_from_file()
+links = load_links_from_file()
+ratings = load_ratings_from_file()
+tags = load_tags_from_file()
 
-movies = load_movies_from_file(BASE_PATH / "movies.csv")
-links = load_links_from_file(BASE_PATH / "links.csv")
-ratings = load_ratings_from_file(BASE_PATH / "ratings.csv")
-tags = load_tags_from_file(BASE_PATH / "tags.csv")
-
+# Załaduj do bazy
 for m in movies:
-    session.add(Movie(id=m.id, title=m.title, genres=m.genres))
+    session.add(Movie(**m))
 for l in links:
-    session.add(Link(movieId=l.movieId, imdbId=l.imdbId, tmdbId=l.tmdbId))
+    session.add(Link(**l))
 for r in ratings:
-    session.add(Rating(userId=r.userId, movieId=r.movieId, rating=r.rating, timestamp=r.timestamp))
+    session.add(Rating(**r))
 for t in tags:
-    session.add(Tag(userId=t.userId, movieId=t.movieId, tag=t.tag, timestamp=t.timestamp))
+    session.add(Tag(**t))
 
 session.commit()
 session.close()
+
+print("Dane załadowane do bazy SQLite (movies.db)")
