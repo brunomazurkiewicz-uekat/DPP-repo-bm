@@ -10,13 +10,11 @@ from loaders import (
 Base.metadata.create_all(bind=engine)
 session = SessionLocal()
 
-# Wczytaj dane z CSV
 movies = load_movies_from_file()
 links = load_links_from_file()
 ratings = load_ratings_from_file()
 tags = load_tags_from_file()
 
-# Załaduj do bazy
 for m in movies:
     session.add(Movie(**m))
 for l in links:

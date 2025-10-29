@@ -22,7 +22,6 @@ class Link(Base):
 class Rating(Base):
     __tablename__ = "ratings"
 
-    # przykład złożonego klucza: (userId, movieId, timestamp)
     userId = Column(Integer, primary_key=True)
     movieId = Column(Integer, ForeignKey("movies.id", ondelete="CASCADE"), primary_key=True)
     rating = Column(Float, nullable=False)
@@ -32,7 +31,6 @@ class Rating(Base):
 class Tag(Base):
     __tablename__ = "tags"
 
-    # złożony klucz: (userId, movieId, tag, timestamp)
     userId = Column(Integer, primary_key=True)
     movieId = Column(Integer, ForeignKey("movies.id", ondelete="CASCADE"), primary_key=True)
     tag = Column(String, primary_key=True)
