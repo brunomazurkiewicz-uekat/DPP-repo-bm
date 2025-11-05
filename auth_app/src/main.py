@@ -3,11 +3,15 @@ from pydantic import BaseModel
 from datetime import datetime, timedelta
 import jwt
 import bcrypt
-from users_db import USERS_DB
+from .users_db import USERS_DB
+from auth_app.models.database import Base, engine
+from auth_app.models.user import User
+
+Base.metadata.create_all(bind=engine)
 
 app = FastAPI()
 
-SECRET_KEY = "super_secret_key" # w praktyce trzymane w zmiennych środowiskowych
+SECRET_KEY = "super_secret_key" # trzymane w zmiennych środowiskowych
 ALGORITHM = "HS256"
 
 class LoginData(BaseModel):
@@ -28,8 +32,8 @@ def login(data: LoginData):
 
     payload = {
     "sub": username,
-    "iat": datetime.utcnow(),
-    "exp": datetime.utcnow() + timedelta(hours=1)
+    "iat": datetime.now,
+    "exp": datetime.now + timedelta(hours=1)
     }
 
     token = jwt.encode(payload, SECRET_KEY, algorithm=ALGORITHM)
