@@ -1,6 +1,7 @@
 from datetime import datetime, timedelta
 import bcrypt
 import jwt
+from typing import Optional
 from fastapi import Depends, FastAPI, HTTPException
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
@@ -58,6 +59,23 @@ class LoginData(BaseModel):
     username: str
     password: str
 
+class CreateUserRequest(BaseModel):
+    username: str
+    password: str
+    email: Optional[str] = None
+
+
+class UserResponse(BaseModel):
+    id: int
+    username: str
+    email: Optional[str]
+    is_active: bool
+    created_at: datetime
+
+    class Config:
+        orm_mode = True
+
+
 @app.post("/login")
 def login(data: LoginData, db: Session = Depends(get_db)):
     username = data.username
@@ -79,3 +97,29 @@ def login(data: LoginData, db: Session = Depends(get_db)):
 
     token = jwt.encode(payload, SECRET_KEY, algorithm=ALGORITHM)
     return {"access_token": token, "token_type": "bearer"}
+
+@app.post("/users", response_model=UserResponse, status_code=201)
+def create_user(data: CreateUserRequest, db: Session = Depends(get_db)):
+    if db.query(User).filter(User.username == data.username).first():
+        raise HTTPException(status_code=400, detail="Username already exists")
+
+    if data.email and db.query(User).filter(User.email == data.email).first():
+        raise HTTPException(status_code=400, detail="Email already exists")
+
+    hashed_password = bcrypt.hashpw(
+        data.password.encode("utf-8"),
+        bcrypt.gensalt(),
+    ).decode("utf-8")
+
+    user = User(
+        username=data.username,
+        password_hash=hashed_password,
+        email=data.email,
+        is_active=True,
+    )
+
+    db.add(user)
+    db.commit()
+    db.refresh(user)
+
+    return user
