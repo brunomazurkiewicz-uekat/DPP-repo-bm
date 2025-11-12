@@ -1,5 +1,5 @@
 from datetime import datetime
-from sqlalchemy import Column, Integer, String, Float, ForeignKey, Text, Boolean, DateTime
+from sqlalchemy import Column, Integer, String, Boolean, DateTime
 from auth_app.models.database import Base
 
 class User(Base):
@@ -10,4 +10,4 @@ class User(Base):
     password_hash = Column(String(128), nullable=False)
     email = Column(String(100), nullable=True, unique=True)
     is_active = Column(Boolean, nullable=False, default=True)
-    created_at = Column(DateTime, nullable=False, default= datetime.now)
+    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)

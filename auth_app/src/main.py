@@ -1,39 +1,80 @@
-from fastapi import FastAPI, HTTPException
-from pydantic import BaseModel
 from datetime import datetime, timedelta
-import jwt
 import bcrypt
-from .users_db import USERS_DB
-from auth_app.models.database import Base, engine
+import jwt
+from fastapi import Depends, FastAPI, HTTPException
+from pydantic import BaseModel
+from sqlalchemy.orm import Session
+
+from auth_app.models.database import Base, SessionLocal, engine
 from auth_app.models.user import User
 
 Base.metadata.create_all(bind=engine)
 
 app = FastAPI()
 
-SECRET_KEY = "super_secret_key" # trzymane w zmiennych środowiskowych
+SECRET_KEY = "super_secret_key"  # trzymane w zmiennych środowiskowych
 ALGORITHM = "HS256"
+
+DEFAULT_USERS = [
+    {
+        "username": "admin",
+        "password": "admin123",
+        "email": None,
+    }
+]
+
+
+def get_db():
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
+
+
+@app.on_event("startup")
+def seed_default_users():
+    with SessionLocal() as db:
+        for default_user in DEFAULT_USERS:
+            if db.query(User).filter(User.username == default_user["username"]).first():
+                continue
+
+            hashed_password = bcrypt.hashpw(
+                default_user["password"].encode("utf-8"),
+                bcrypt.gensalt(),
+            ).decode("utf-8")
+
+            user = User(
+                username=default_user["username"],
+                password_hash=hashed_password,
+                email=default_user.get("email"),
+                is_active=True,
+            )
+            db.add(user)
+        db.commit()
+
 
 class LoginData(BaseModel):
     username: str
     password: str
 
 @app.post("/login")
-def login(data: LoginData):
+def login(data: LoginData, db: Session = Depends(get_db)):
     username = data.username
-    password = data.password.encode('utf-8')
+    password = data.password.encode("utf-8")
 
-    if username not in USERS_DB:
+    user = db.query(User).filter(User.username == username).first()
+
+    if user is None or not user.is_active:
         raise HTTPException(status_code=401, detail="Invalid credentials")
 
-    hashed_pw = USERS_DB[username]
-    if not bcrypt.checkpw(password, hashed_pw):
+    if not bcrypt.checkpw(password, user.password_hash.encode("utf-8")):
         raise HTTPException(status_code=401, detail="Invalid credentials")
 
     payload = {
     "sub": username,
-    "iat": datetime.now,
-    "exp": datetime.now + timedelta(hours=1)
+        "iat": datetime.utcnow(),
+        "exp": datetime.utcnow() + timedelta(hours=1),
     }
 
     token = jwt.encode(payload, SECRET_KEY, algorithm=ALGORITHM)
