@@ -1,6 +1,6 @@
-from database import SessionLocal, engine, Base
-from models import Movie, Link, Rating, Tag
-from loaders import (
+from src.database import SessionLocal, engine, Base
+from src.models import Movie, Link, Rating, Tag
+from src.loaders import (
     load_movies_from_file,
     load_links_from_file,
     load_ratings_from_file,
