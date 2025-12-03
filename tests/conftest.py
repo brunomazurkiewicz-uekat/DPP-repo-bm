@@ -1,18 +1,46 @@
-import sys
-from pathlib import Path
+# tests/unit/conftest.py
 import pytest
+from fastapi.testclient import TestClient
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
 
-ROOT_DIR = Path(__file__).resolve().parents[1]
-if str(ROOT_DIR) not in sys.path:
-    sys.path.insert(0, str(ROOT_DIR))
+from src.database import Base
+from src.main import app, get_db
 
 
-@pytest.fixture
-def sample_user():
-    return {"id": 1, "name": "Bruno"}
+# osobna baza do testów (in-memory)
+SQLALCHEMY_DATABASE_URL = "sqlite:///:memory:"
 
-@pytest.fixture
-def config_tmp(tmp_path):
-    p = tmp_path / "config.ini"
-    p.write_text("[app]\nmode=dev\n")
-    return p
+engine = create_engine(
+    SQLALCHEMY_DATABASE_URL,
+    connect_args={"check_same_thread": False},
+)
+TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+
+
+def override_get_db():
+    db = TestingSessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
+
+
+app.dependency_overrides[get_db] = override_get_db
+
+
+@pytest.fixture(scope="function")
+def db_session():
+    Base.metadata.drop_all(bind=engine)
+    Base.metadata.create_all(bind=engine)
+
+    db = TestingSessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
+
+
+@pytest.fixture(scope="function")
+def client(db_session):
+    return TestClient(app)

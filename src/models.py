@@ -1,5 +1,8 @@
-from sqlalchemy import Column, Integer, String, Float, ForeignKey, Text
-from src.database import Base
+# src/models.py
+from sqlalchemy import Column, Integer, String, Float, Text, Boolean, DateTime, ForeignKey
+from sqlalchemy.sql import func
+
+from .database import Base
 
 
 class Movie(Base):
@@ -13,8 +16,8 @@ class Movie(Base):
 class Link(Base):
     __tablename__ = "links"
 
-    # klucz główny = movieId, poprawne użycie ForeignKey:
-    movieId = Column(Integer, ForeignKey("movies.id", ondelete="CASCADE"), primary_key=True)
+    id = Column(Integer, primary_key=True, index=True)
+    movieId = Column(Integer, nullable=False)  # można dać ForeignKey("movies.id")
     imdbId = Column(Integer, nullable=True)
     tmdbId = Column(Integer, nullable=True)
 
@@ -22,16 +25,18 @@ class Link(Base):
 class Rating(Base):
     __tablename__ = "ratings"
 
-    userId = Column(Integer, primary_key=True)
-    movieId = Column(Integer, ForeignKey("movies.id", ondelete="CASCADE"), primary_key=True)
+    id = Column(Integer, primary_key=True, index=True)
+    userId = Column(Integer, nullable=False)
+    movieId = Column(Integer, nullable=False)
     rating = Column(Float, nullable=False)
-    timestamp = Column(Integer, primary_key=True)
+    timestamp = Column(Integer, nullable=False)
 
 
 class Tag(Base):
     __tablename__ = "tags"
 
-    userId = Column(Integer, primary_key=True)
-    movieId = Column(Integer, ForeignKey("movies.id", ondelete="CASCADE"), primary_key=True)
-    tag = Column(String, primary_key=True)
-    timestamp = Column(Integer, primary_key=True)
+    id = Column(Integer, primary_key=True, index=True)
+    userId = Column(Integer, nullable=False)
+    movieId = Column(Integer, nullable=False)
+    tag = Column(Text, nullable=False)
+    timestamp = Column(Integer, nullable=False)

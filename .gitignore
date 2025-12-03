@@ -1,0 +1,79 @@
+# ===========================================
+# VENV / PYTHON
+# ===========================================
+.venv/
+venv/
+env/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.pdb
+
+# Ignore local virtual environment activation scripts
+*.PS1
+*.bat
+
+# ===========================================
+# SQLITE / DANE GENEROWANE
+# ===========================================
+# All SQLite databases
+*.db
+*.sqlite
+*.sqlite3
+
+# Specifically your project DB
+.movies.db
+
+# ===========================================
+# FASTAPI / UVICORN
+# ===========================================
+# Logs
+logs/
+*.log
+
+# Auto-generated reload directories (sometimes Uvicorn creates these)
+.reload/
+
+# ===========================================
+# PYTEST / COVERAGE
+# ===========================================
+.pytest_cache/
+.coverage
+coverage.xml
+htmlcov/
+
+# ===========================================
+# EDITOR / IDE
+# ===========================================
+# VS Code
+.vscode/
+# JetBrains (PyCharm)
+.idea/
+
+# ===========================================
+# SYSTEM FILES
+# ===========================================
+# Windows
+Thumbs.db
+desktop.ini
+
+# MacOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# ===========================================
+# MISC / TEMP FILES
+# ===========================================
+*.tmp
+*.temp
+*.swp
+*.swo
+
+# ===========================================
+# AUTH APP (if you want to ignore)
+# ===========================================
+# Uncomment if auth_app is only for local experimentation
+# auth_app/__pycache__/
+# auth_app/.pytest_cache/

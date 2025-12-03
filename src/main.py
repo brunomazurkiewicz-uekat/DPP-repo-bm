@@ -1,21 +1,20 @@
-from __future__ import annotations
+# src/main.py
 from typing import List, Optional
-from fastapi import FastAPI, Depends, HTTPException
+
+from fastapi import FastAPI, Depends, HTTPException, status
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
-from sqlalchemy import select
-from starlette import status
 
-from src.database import SessionLocal, engine
-from src.models import Base, Movie, Link, Rating, Tag
+from .database import SessionLocal, engine, Base
+from .models import Movie, Link, Rating, Tag
 
-
-
-app = FastAPI()
 Base.metadata.create_all(bind=engine)
 
+app = FastAPI(title="Movies API")
 
-# Dependency do sesji
+
+# ---------- DB dependency ----------
+
 def get_db():
     db = SessionLocal()
     try:
@@ -24,10 +23,9 @@ def get_db():
         db.close()
 
 
-# ---------- Pydantic SCHEMATY ----------
+# ---------- Pydantic schematy ----------
 
-# --- MOVIES ---
-
+# MOVIES
 class MovieBase(BaseModel):
     title: str
     genres: str
@@ -49,11 +47,12 @@ class MovieOut(MovieBase):
         orm_mode = True
 
 
-# --- LINKS ---
+# LINKS
 class LinkBase(BaseModel):
     movieId: int
     imdbId: Optional[int] = None
     tmdbId: Optional[int] = None
+
 
 class LinkCreate(LinkBase):
     pass
@@ -65,12 +64,13 @@ class LinkUpdate(BaseModel):
 
 
 class LinkOut(LinkBase):
+    id: int
+
     class Config:
         orm_mode = True
 
 
-# --- RATINGS ---
-
+# RATINGS
 class RatingBase(BaseModel):
     userId: int
     movieId: int
@@ -88,12 +88,13 @@ class RatingUpdate(BaseModel):
 
 
 class RatingOut(RatingBase):
+    id: int
+
     class Config:
         orm_mode = True
 
 
-# --- TAGS ---
-
+# TAGS
 class TagBase(BaseModel):
     userId: int
     movieId: int
@@ -111,11 +112,66 @@ class TagUpdate(BaseModel):
 
 
 class TagOut(TagBase):
+    id: int
+
     class Config:
         orm_mode = True
 
+
 # =========================================================
-#                    LINKS – LIST + CRUD
+#                       MOVIES
+# =========================================================
+
+@app.get("/movies", response_model=List[MovieOut])
+def list_movies(db: Session = Depends(get_db)):
+    return db.query(Movie).all()
+
+
+@app.post("/movies", response_model=MovieOut, status_code=status.HTTP_201_CREATED)
+def create_movie(data: MovieCreate, db: Session = Depends(get_db)):
+    movie = Movie(title=data.title, genres=data.genres)
+    db.add(movie)
+    db.commit()
+    db.refresh(movie)
+    return movie
+
+
+@app.get("/movies/{movie_id}", response_model=MovieOut)
+def get_movie(movie_id: int, db: Session = Depends(get_db)):
+    movie = db.get(Movie, movie_id)
+    if not movie:
+        raise HTTPException(status_code=404, detail="Movie not found")
+    return movie
+
+
+@app.put("/movies/{movie_id}", response_model=MovieOut)
+def update_movie(movie_id: int, data: MovieUpdate, db: Session = Depends(get_db)):
+    movie = db.get(Movie, movie_id)
+    if not movie:
+        raise HTTPException(status_code=404, detail="Movie not found")
+
+    if data.title is not None:
+        movie.title = data.title
+    if data.genres is not None:
+        movie.genres = data.genres
+
+    db.commit()
+    db.refresh(movie)
+    return movie
+
+
+@app.delete("/movies/{movie_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_movie(movie_id: int, db: Session = Depends(get_db)):
+    movie = db.get(Movie, movie_id)
+    if not movie:
+        raise HTTPException(status_code=404, detail="Movie not found")
+    db.delete(movie)
+    db.commit()
+    return None
+
+
+# =========================================================
+#                        LINKS
 # =========================================================
 
 @app.get("/links", response_model=List[LinkOut])
@@ -125,10 +181,6 @@ def list_links(db: Session = Depends(get_db)):
 
 @app.post("/links", response_model=LinkOut, status_code=status.HTTP_201_CREATED)
 def create_link(data: LinkCreate, db: Session = Depends(get_db)):
-    existing = db.get(Link, data.movieId)
-    if existing:
-        raise HTTPException(status_code=400, detail="Link for this movie already exists")
-
     link = Link(
         movieId=data.movieId,
         imdbId=data.imdbId,
@@ -140,17 +192,17 @@ def create_link(data: LinkCreate, db: Session = Depends(get_db)):
     return link
 
 
-@app.get("/links/{movie_id}", response_model=LinkOut)
-def get_link(movie_id: int, db: Session = Depends(get_db)):
-    link = db.get(Link, movie_id)
+@app.get("/links/{link_id}", response_model=LinkOut)
+def get_link(link_id: int, db: Session = Depends(get_db)):
+    link = db.get(Link, link_id)
     if not link:
         raise HTTPException(status_code=404, detail="Link not found")
     return link
 
 
-@app.put("/links/{movie_id}", response_model=LinkOut)
-def update_link(movie_id: int, data: LinkUpdate, db: Session = Depends(get_db)):
-    link = db.get(Link, movie_id)
+@app.put("/links/{link_id}", response_model=LinkOut)
+def update_link(link_id: int, data: LinkUpdate, db: Session = Depends(get_db)):
+    link = db.get(Link, link_id)
     if not link:
         raise HTTPException(status_code=404, detail="Link not found")
 
@@ -164,20 +216,18 @@ def update_link(movie_id: int, data: LinkUpdate, db: Session = Depends(get_db)):
     return link
 
 
-@app.delete("/links/{movie_id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_link(movie_id: int, db: Session = Depends(get_db)):
-    link = db.get(Link, movie_id)
+@app.delete("/links/{link_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_link(link_id: int, db: Session = Depends(get_db)):
+    link = db.get(Link, link_id)
     if not link:
         raise HTTPException(status_code=404, detail="Link not found")
-
     db.delete(link)
     db.commit()
     return None
 
 
 # =========================================================
-#                   RATINGS – LIST + CRUD
-#   (klucz złożony: userId + movieId + timestamp)
+#                       RATINGS
 # =========================================================
 
 @app.get("/ratings", response_model=List[RatingOut])
@@ -199,50 +249,17 @@ def create_rating(data: RatingCreate, db: Session = Depends(get_db)):
     return rating
 
 
-@app.get(
-    "/ratings/{user_id}/{movie_id}/{timestamp}",
-    response_model=RatingOut,
-)
-def get_rating(
-    user_id: int,
-    movie_id: int,
-    timestamp: int,
-    db: Session = Depends(get_db),
-):
-    rating = (
-        db.query(Rating)
-        .filter(
-            Rating.userId == user_id,
-            Rating.movieId == movie_id,
-            Rating.timestamp == timestamp,
-        )
-        .first()
-    )
+@app.get("/ratings/{rating_id}", response_model=RatingOut)
+def get_rating(rating_id: int, db: Session = Depends(get_db)):
+    rating = db.get(Rating, rating_id)
     if not rating:
         raise HTTPException(status_code=404, detail="Rating not found")
     return rating
 
 
-@app.put(
-    "/ratings/{user_id}/{movie_id}/{timestamp}",
-    response_model=RatingOut,
-)
-def update_rating(
-    user_id: int,
-    movie_id: int,
-    timestamp: int,
-    data: RatingUpdate,
-    db: Session = Depends(get_db),
-):
-    rating = (
-        db.query(Rating)
-        .filter(
-            Rating.userId == user_id,
-            Rating.movieId == movie_id,
-            Rating.timestamp == timestamp,
-        )
-        .first()
-    )
+@app.put("/ratings/{rating_id}", response_model=RatingOut)
+def update_rating(rating_id: int, data: RatingUpdate, db: Session = Depends(get_db)):
+    rating = db.get(Rating, rating_id)
     if not rating:
         raise HTTPException(status_code=404, detail="Rating not found")
 
@@ -256,25 +273,9 @@ def update_rating(
     return rating
 
 
-@app.delete(
-    "/ratings/{user_id}/{movie_id}/{timestamp}",
-    status_code=status.HTTP_204_NO_CONTENT,
-)
-def delete_rating(
-    user_id: int,
-    movie_id: int,
-    timestamp: int,
-    db: Session = Depends(get_db),
-):
-    rating = (
-        db.query(Rating)
-        .filter(
-            Rating.userId == user_id,
-            Rating.movieId == movie_id,
-            Rating.timestamp == timestamp,
-        )
-        .first()
-    )
+@app.delete("/ratings/{rating_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_rating(rating_id: int, db: Session = Depends(get_db)):
+    rating = db.get(Rating, rating_id)
     if not rating:
         raise HTTPException(status_code=404, detail="Rating not found")
 
@@ -282,9 +283,9 @@ def delete_rating(
     db.commit()
     return None
 
+
 # =========================================================
-#                     TAGS – LIST + CRUD
-#   (klucz złożony: userId + movieId + tag + timestamp)
+#                        TAGS
 # =========================================================
 
 @app.get("/tags", response_model=List[TagOut])
@@ -306,50 +307,17 @@ def create_tag(data: TagCreate, db: Session = Depends(get_db)):
     return tag
 
 
-@app.get(
-    "/tags/{user_id}/{movie_id}/{timestamp}",
-    response_model=TagOut,
-)
-def get_tag(
-    user_id: int,
-    movie_id: int,
-    timestamp: int,
-    db: Session = Depends(get_db),
-):
-    tag = (
-        db.query(Tag)
-        .filter(
-            Tag.userId == user_id,
-            Tag.movieId == movie_id,
-            Tag.timestamp == timestamp,
-        )
-        .first()
-    )
+@app.get("/tags/{tag_id}", response_model=TagOut)
+def get_tag(tag_id: int, db: Session = Depends(get_db)):
+    tag = db.get(Tag, tag_id)
     if not tag:
         raise HTTPException(status_code=404, detail="Tag not found")
     return tag
 
 
-@app.put(
-    "/tags/{user_id}/{movie_id}/{timestamp}",
-    response_model=TagOut,
-)
-def update_tag(
-    user_id: int,
-    movie_id: int,
-    timestamp: int,
-    data: TagUpdate,
-    db: Session = Depends(get_db),
-):
-    tag = (
-        db.query(Tag)
-        .filter(
-            Tag.userId == user_id,
-            Tag.movieId == movie_id,
-            Tag.timestamp == timestamp,
-        )
-        .first()
-    )
+@app.put("/tags/{tag_id}", response_model=TagOut)
+def update_tag(tag_id: int, data: TagUpdate, db: Session = Depends(get_db)):
+    tag = db.get(Tag, tag_id)
     if not tag:
         raise HTTPException(status_code=404, detail="Tag not found")
 
@@ -363,25 +331,9 @@ def update_tag(
     return tag
 
 
-@app.delete(
-    "/tags/{user_id}/{movie_id}/{timestamp}",
-    status_code=status.HTTP_204_NO_CONTENT,
-)
-def delete_tag(
-    user_id: int,
-    movie_id: int,
-    timestamp: int,
-    db: Session = Depends(get_db),
-):
-    tag = (
-        db.query(Tag)
-        .filter(
-            Tag.userId == user_id,
-            Tag.movieId == movie_id,
-            Tag.timestamp == timestamp,
-        )
-        .first()
-    )
+@app.delete("/tags/{tag_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_tag(tag_id: int, db: Session = Depends(get_db)):
+    tag = db.get(Tag, tag_id)
     if not tag:
         raise HTTPException(status_code=404, detail="Tag not found")
 
@@ -389,48 +341,8 @@ def delete_tag(
     db.commit()
     return None
 
-# --- Endpointy ---
+
+# Root dla sanity-check
 @app.get("/")
 def read_root():
-    return {"hello": "world"}
-
-
-@app.get("/movies", response_model=List[MovieOut])
-def get_movies(limit: int | None = None, db: Session = Depends(get_db)):
-    stmt = select(Movie)
-    if limit:
-        stmt = stmt.limit(limit)
-    return list(db.scalars(stmt))
-
-
-@app.get("/links", response_model=List[LinkOut])
-def get_links(limit: int | None = None, db: Session = Depends(get_db)):
-    stmt = select(Link)
-    if limit:
-        stmt = stmt.limit(limit)
-    return list(db.scalars(stmt))
-
-
-@app.get("/ratings", response_model=List[RatingOut])
-def get_ratings(
-    movieId: int | None = None,
-    userId: int | None = None,
-    limit: int | None = None,
-    db: Session = Depends(get_db),
-):
-    stmt = select(Rating)
-    if movieId:
-        stmt = stmt.where(Rating.movieId == movieId)
-    if userId:
-        stmt = stmt.where(Rating.userId == userId)
-    if limit:
-        stmt = stmt.limit(limit)
-    return list(db.scalars(stmt))
-
-
-@app.get("/tags", response_model=List[TagOut])
-def get_tags(limit: int | None = None, db: Session = Depends(get_db)):
-    stmt = select(Tag)
-    if limit:
-        stmt = stmt.limit(limit)
-    return list(db.scalars(stmt))
+    return {"status": "ok"}

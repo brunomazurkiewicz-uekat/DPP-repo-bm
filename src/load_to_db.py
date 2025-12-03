@@ -1,30 +1,69 @@
-from src.database import SessionLocal, engine, Base
-from src.models import Movie, Link, Rating, Tag
-from src.loaders import (
-    load_movies_from_file,
-    load_links_from_file,
-    load_ratings_from_file,
-    load_tags_from_file,
+# src/load_to_db.py
+from .database import SessionLocal, engine, Base
+from .models import Movie, Link, Rating, Tag
+from .loaders import (
+    load_movies_csv,
+    load_links_csv,
+    load_ratings_csv,
+    load_tags_csv,
 )
 
-Base.metadata.create_all(bind=engine)
-session = SessionLocal()
 
-movies = load_movies_from_file()
-links = load_links_from_file()
-ratings = load_ratings_from_file()
-tags = load_tags_from_file()
+def load_all():
+    Base.metadata.create_all(bind=engine)
 
-for m in movies:
-    session.add(Movie(**m))
-for l in links:
-    session.add(Link(**l))
-for r in ratings:
-    session.add(Rating(**r))
-for t in tags:
-    session.add(Tag(**t))
+    db = SessionLocal()
+    try:
+        # Czyścimy tabele (opcjonalnie)
+        db.query(Tag).delete()
+        db.query(Rating).delete()
+        db.query(Link).delete()
+        db.query(Movie).delete()
+        db.commit()
 
-session.commit()
-session.close()
+        # MOVIES
+        for m in load_movies_csv():
+            movie = Movie(
+                id=m["id"],
+                title=m["title"],
+                genres=m["genres"],
+            )
+            db.add(movie)
 
-print("Dane załadowane do bazy SQLite (movies.db)")
+        # LINKS
+        for l in load_links_csv():
+            link = Link(
+                movieId=l["movieId"],
+                imdbId=l["imdbId"],
+                tmdbId=l["tmdbId"],
+            )
+            db.add(link)
+
+        # RATINGS
+        for r in load_ratings_csv():
+            rating = Rating(
+                userId=r["userId"],
+                movieId=r["movieId"],
+                rating=r["rating"],
+                timestamp=r["timestamp"],
+            )
+            db.add(rating)
+
+        # TAGS
+        for t in load_tags_csv():
+            tag = Tag(
+                userId=t["userId"],
+                movieId=t["movieId"],
+                tag=t["tag"],
+                timestamp=t["timestamp"],
+            )
+            db.add(tag)
+
+        db.commit()
+    finally:
+        db.close()
+
+
+if __name__ == "__main__":
+    load_all()
+    print("Dane załadowane do bazy .movies.db")
