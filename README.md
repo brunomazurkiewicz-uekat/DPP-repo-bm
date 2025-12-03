@@ -28,3 +28,31 @@ Projekt składa się z dwóch głównych części:
 ```bash
 git clone <repo-url>
 cd repo
+
+### 2. Aktywacja środowiska
+
+PowerShell (Windows):
+
+.\.venv\Scripts\Activate.ps1
+
+
+CMD:
+
+.\.venv\Scripts\activate.bat
+
+### 3. Instalacja zależności
+pip install -r requirements.txt
+
+🗄️ Załadowanie danych do bazy
+python -m src.load_to_db
+
+
+To stworzy plik .movies.db zgodny z modelami SQLAlchemy.
+
+🚀 Uruchomienie API
+uvicorn src.main:app --reload
+
+
+Swagger dostępny pod:
+
+👉 http://127.0.0.1:8000/docs
