@@ -3,6 +3,7 @@ from typing import List, Optional
 
 from fastapi import FastAPI, Depends, HTTPException, status
 from pydantic import BaseModel
+from .image_analysis import detect_people_from_url
 from sqlalchemy.orm import Session
 
 from .database import SessionLocal, engine, Base
@@ -116,6 +117,13 @@ class TagOut(TagBase):
 
     class Config:
         orm_mode = True
+
+class AnalyzeImageRequest(BaseModel):
+    url: str
+
+
+class AnalyzeImageResponse(BaseModel):
+    people_count: int
 
 
 # =========================================================
@@ -340,6 +348,21 @@ def delete_tag(tag_id: int, db: Session = Depends(get_db)):
     db.delete(tag)
     db.commit()
     return None
+
+@app.post("/analyze_img", response_model=AnalyzeImageResponse)
+def analyze_img(body: AnalyzeImageRequest):
+    """
+    Przyjmuje URL obrazka, wykrywa osoby i zwraca ich liczbę.
+    """
+    try:
+        count = detect_people_from_url(body.url)
+    except Exception as e:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Nie udało się przetworzyć obrazu: {e}",
+        )
+
+    return AnalyzeImageResponse(people_count=count)
 
 
 # Root dla sanity-check
