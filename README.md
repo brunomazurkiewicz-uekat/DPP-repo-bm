@@ -1,3 +1,9 @@
-"# DPP-repo-bm" 
+# Projekt zaliczeniowy – Zadanie X
 
-Created for 'DPP' lab projects
+## Opis
+Backend oparty na FastAPI. Ten branch zawiera implementację zadania X.
+
+## Uruchomienie
+```bash
+pip install -r requirements.txt
+uvicorn app.main:app --reload
