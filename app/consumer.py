@@ -1,5 +1,5 @@
 import json
-from datetime import datetime
+from datetime import datetime, timezone
 
 import pika
 
@@ -30,7 +30,7 @@ def callback(ch, method, properties, body: bytes):
         "people_count": people_count,
         "status": status,
         "error": error,
-        "timestamp": datetime.utcnow().isoformat(),
+        "timestamp": datetime.now(timezone.utc).isoformat(),
     }
 
     append_result(record)
